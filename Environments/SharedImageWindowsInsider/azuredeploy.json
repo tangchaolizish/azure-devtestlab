@@ -44,8 +44,7 @@
         "publicIpAddressSku": "Standard",
         "publicIpAddressType": "Static",
         "publicIpAddressName": "testIp",
-        "subnetName": "testSubnet",
-        "networkSecurityGroupRules": "[]"
+        "subnetName": "testSubnet"
     },
     "resources": [
         {
@@ -83,7 +82,7 @@
             "name": "[parameters('networkSecurityGroupName')]",
             "location": "[parameters('location')]",
             "properties": {
-                "securityRules": "[variables('networkSecurityGroupRules')]"
+                "securityRules": "[]"
             }
         },
         {
