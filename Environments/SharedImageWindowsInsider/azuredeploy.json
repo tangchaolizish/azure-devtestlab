@@ -2,6 +2,25 @@
     "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "addressPrefixes": {
+            "type": "Array"
+        },
+        "subnets": {
+            "type": "Array"
+        },
+        "virtualMachineName": {
+            "type": "String"
+        },
+        "virtualMachineComputerName": {
+            "type": "String"
+        },
+        "adminUsername": {
+            "type": "String",
+            "defaultValue": "labtester"
+        },
+        "adminPassword": {
+            "type": "SecureString"
+        },
         "imageId": {
             "type": "string",
             "defaultValue": "/subscriptions/ac77c8bc-f7c9-4592-9682-c9b0f643f0c9/resourceGroups/cti-insiders-rg/providers/Microsoft.Compute/galleries/cti_insiders_sig/images/linux-generlaized"
@@ -18,33 +37,47 @@
             "type": "String",
             "defaultValue": "testNsg"
         },
-        "virtualNetworkId": {
-            "type": "String"
+        "networkSecurityGroupRules": {
+            "type": "Array",
+            "defaultValue": "[{\"name\":\"default-allow-ssh\",\"properties\":{\"priority\":1000,\"protocol\":\"TCP\",\"access\":\"Allow\",\"direction\":\"Inbound\",\"sourceApplicationSecurityGroups\":[],\"destinationApplicationSecurityGroups\":[],\"sourceAddressPrefix\":\"*\",\"sourcePortRange\":\"*\",\"destinationAddressPrefix\":\"*\",\"destinationPortRange\":\"22\"}}]"
         },
-        "virtualMachineName": {
-            "type": "String"
+        "subnetName": {
+            "type": "String",
+            "defaultValue": "default"
         },
-        "virtualMachineComputerName": {
-            "type": "String"
+        "virtualNetworkName": {
+            "type": "String",
+            "defaultValue": "ctitestnet"
         },
-        "adminUsername": {
-            "type": "String"
+        "publicIpAddressName": {
+            "type": "String",
+            "defaultValue": "ctitestip"
         },
-        "adminPassword": {
-            "type": "SecureString"
+        "publicIpAddressType": {
+            "type": "String",
+            "defaultValue": "Static"
+        },
+        "publicIpAddressSku": {
+            "type": "String",
+            "defaultValue": "Standard"
+        },
+        "osDiskType": {
+            "type": "String",
+            "defaultValue": "Standard_LRS"
+        },
+        "virtualMachineSize": {
+            "type": "String",
+            "defaultValue": "Standard_DS1_v2"
+        },
+        "zone": {
+            "type": "String",
+            "defaultValue": "1"
         }
     },
     "variables": {
         "nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupName'))]",
-        "vnetId": "[parameters('virtualNetworkId')]",
-        "subnetRef": "[concat(variables('vnetId'), '/subnets/', variables('subnetName'))]",
-        "zone": "1",
-        "virtualMachineSize": "Standard_DS1_v2",
-        "osDiskType": "Standard_LRS",
-        "publicIpAddressSku": "Standard",
-        "publicIpAddressType": "Static",
-        "publicIpAddressName": "testIp",
-        "subnetName": "testSubnet"
+        "vnetId": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+        "subnetRef": "[concat(variables('vnetId'), '/subnets/', parameters('subnetName'))]"
     },
     "resources": [
         {
@@ -54,7 +87,8 @@
             "location": "[parameters('location')]",
             "dependsOn": [
                 "[concat('Microsoft.Network/networkSecurityGroups/', parameters('networkSecurityGroupName'))]",
-                "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'))]"
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+                "[concat('Microsoft.Network/publicIpAddresses/', parameters('publicIpAddressName'))]"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -66,7 +100,7 @@
                             },
                             "privateIPAllocationMethod": "Dynamic",
                             "publicIpAddress": {
-                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('publicIpAddressName'))]"
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', parameters('publicIpAddressName'))]"
                             }
                         }
                     }
@@ -82,22 +116,34 @@
             "name": "[parameters('networkSecurityGroupName')]",
             "location": "[parameters('location')]",
             "properties": {
-                "securityRules": "[]"
+                "securityRules": "[parameters('networkSecurityGroupRules')]"
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2019-09-01",
+            "name": "[parameters('virtualNetworkName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": "[parameters('addressPrefixes')]"
+                },
+                "subnets": "[parameters('subnets')]"
             }
         },
         {
             "type": "Microsoft.Network/publicIpAddresses",
             "apiVersion": "2019-02-01",
-            "name": "[variables('publicIpAddressName')]",
+            "name": "[parameters('publicIpAddressName')]",
             "location": "[parameters('location')]",
             "sku": {
-                "name": "[variables('publicIpAddressSku')]"
+                "name": "[parameters('publicIpAddressSku')]"
             },
             "zones": [
-                "[variables('zone')]"
+                "[parameters('zone')]"
             ],
             "properties": {
-                "publicIpAllocationMethod": "[variables('publicIpAddressType')]"
+                "publicIpAllocationMethod": "[parameters('publicIpAddressType')]"
             }
         },
         {
@@ -109,11 +155,11 @@
                 "[concat('Microsoft.Network/networkInterfaces/', parameters('networkInterfaceName'))]"
             ],
             "zones": [
-                "[variables('zone')]"
+                "[parameters('zone')]"
             ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "[variables('virtualMachineSize')]"
+                    "vmSize": "[parameters('virtualMachineSize')]"
                 },
                 "storageProfile": {
                     "osDisk": {
