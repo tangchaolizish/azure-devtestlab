@@ -1,0 +1,6 @@
+name: linux-change-sshkey
+version: 1.0.0
+description: linux-change-sshkey desc
+engine:
+  type: ARM
+  templatePath: Artifactfile.json
